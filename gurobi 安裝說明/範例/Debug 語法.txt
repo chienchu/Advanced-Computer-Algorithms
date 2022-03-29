@@ -1,0 +1,17 @@
+WriteModel
+
+model.update();
+model.write("debug.lp");
+
+
+Infeasible
+
+model.update();
+model.computeIIS();
+model.write("model.ilp");
+記得處理完bug要把這幾行退休掉
+
+
+Calculation time limit (put on top)
+
+model.getEnv().set(GRB_DoubleParam_TimeLimit, CTL);	

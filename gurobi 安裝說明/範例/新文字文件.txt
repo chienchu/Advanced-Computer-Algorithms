@@ -1,0 +1,153 @@
+
+
+#include <cstdlib>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include "gurobi_c++.h"	//將Gurobi載入
+
+using namespace std;
+
+#define N 5 //顧客節點數量 node_1~node_5 共個
+//注意，本例網路中總節點數量實為N+1個(6個)，為5個顧客點加上出發點node_0
+
+string itos(int i) //建立將數字轉為文字型態之函式(itos: integer to string)之後命名會用到
+{
+	stringstream s;
+	s << i;
+	return s.str();
+}
+
+/*程式主體*/
+int main(int   argc, char *argv[])
+{
+	string s;	//宣告一個字串變數，未來建模時命名用
+
+	/*讀取資料檔*/
+
+	cout << "Open the file of Cij-data" << endl; //顯示我要開甚麼的檔案
+	fstream fin; //宣告一個存取文件的變數fin
+	fin.open("data.txt", ios::in); //ios::in代表以輸入的方式打開檔案data.txt
+
+	if (!fin)     //檢查檔案是否成功開啟，如果!file為真，表示無法開啟檔案
+	{
+		cerr << "Can't open file!\n"; //檔案開啟失敗，顯示Can't open file!
+		system("pause");
+		exit(1);
+	}
+	else
+		cout << "File open successfully!\n"; //成功開啟檔案即出現此字串
+
+	int c[N + 1][N + 1] = { 0 };  //宣告參數Cij (i,j):{i=0~n j=0~n}，故宣告用N+1
+	for (int i = 0; i <= N; i++)	//將剛剛讀入之資料存進依序存進Cij中，並顯示出來
+	{
+		for (int j = 0; j <= N; j++)
+		{
+			fin >> c[i][j];
+			cout << c[i][j] << "\t";
+		}
+		cout << endl;
+	}
+
+	/*開始進入Gurobi編寫*/
+	try {
+		GRBEnv env = GRBEnv();			//創建一個GUROBI環境 叫做 env
+
+		GRBModel model = GRBModel(env);	//創建一個GUROBI模型 叫做model
+
+		/* Create Variables 建立決策變數 */
+
+		GRBVar x[N + 1][N + 1]; //宣告Gurobi變數 xij
+		for (int i = 0; i <= N; i++)
+		{
+			for (int j = 0; j <= N; j++)
+			{
+				s = "(x" + itos(i) + "_" + itos(j) + ")"; //變數命名用方便debug
+				x[i][j] = model.addVar(0, 9999, 0.0, GRB_BINARY, s); //把變數加到model中01變數
+				//參數第一個是infinty是負數
+			}
+		}
+
+		//宣告Gurobi變數ui
+
+
+
+
+
+
+		model.update(); //把model update一下
+
+	   /* 設定目標式與限制式 */
+
+		GRBLinExpr sum = 0;	//開出一個用來暫存數學式子的空間叫sum，並初始化它為0，用來存數學式子
+
+		//Set objective
+		for (int i = 0; i <= N; i++)
+		{
+			for (int j = 0; j <= N; j++)
+			{
+				sum = sum + c[i][j] * x[i][j];//先把目標式寫進sum
+			}
+		}
+		model.setObjective(sum, GRB_MINIMIZE); //把sum裡的式子設為目標式，目標為minimize
+
+
+		//變數不能乘除變數
+	   // Add constraint 1
+		for (int j = 0; j <= N; j++) //限制式1共有N+1條(j= 0~N)
+		{
+			sum = 0; //把剛剛那個數學式暫存空間sum先清空歸0，在迴圈外
+			s = "c1_" + itos(j); //命名該限制式用
+			for (int i = 0; i <= N; i++)
+			{
+				sum += x[i][j];//x11,x22,x33不能選會走回自己就把參數設極大，min的時候就不會被選到
+			}
+			model.addConstr(sum == 1, s);  //把該式==1設為限制式加入模型
+		}
+
+		// Add constraint 2
+
+
+
+
+		// Add constraint 3
+
+
+
+
+
+
+		// Optimize model
+		model.update();		//更新model
+
+		model.optimize();	//開始求解
+
+
+		//Print out the result
+
+		cout << "\nAns." << endl << endl;
+		for (int i = 0; i <= N; i++)
+		{
+			for (int j = 0; j <= N; j++)
+			{
+				if (x[i][j].get(GRB_DoubleAttr_X) == 1) //xij如果==1
+					cout << i << "->" << j << endl;			 //列印出解
+			}
+		}
+
+		cout << "\nObj: " << model.get(GRB_DoubleAttr_ObjVal) << endl;//列印最佳解的值
+		cout << endl;
+		//至此建模求解完畢，底下那一大串是如果出狀況了，命令程式回傳錯誤代碼給我們，方便我們debug
+
+	}
+	catch (GRBException e) {
+		cout << "Error code = " << e.getErrorCode() << endl;
+		cout << e.getMessage() << endl;
+	}
+	catch (...) {
+		cout << "Exception during optimization" << endl;
+	}
+
+	system("pause");
+	return 0;			//主程式結束
+}
